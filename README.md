@@ -69,28 +69,21 @@ cargo run --release /usr/share/gtk-doc/html/totem/home.png
 
 Without OpenCL:
 ```
-Warning: rusticl platform not found!
 OpenCL is disabled
 
-CPU pipeline: 8.436ms
+CPU pipeline: 8.436ms (avg per iteration)
 ```
 
 With OpenCL and rusticl platform:
 ```
 Platform #0: rusticl
   Device #0: AMD Radeon RX 6800 XT (OpenCL 3.0)
-  -> This is the rusticl platform with OpenCL 3.0 support
-rusticl platform found - configured to use via OPENCV_OPENCL_DEVICE
 
 OpenCL is enabled
+Active OpenCL device → AMD Radeon RX 6800 XT (OpenCL 3.0)
 
-=== ACTIVE OpenCL DEVICE ===
-Device Name: AMD Radeon RX 6800 XT
-Device Version: OpenCL 3.0
-=============================
-
-CPU pipeline: 12.342ms
-OpenCL pipeline: 4.187ms
+CPU pipeline: 12.342ms (avg per iteration)
+OpenCL pipeline: 4.187ms (avg per iteration)
 ```
 
 ## Image Processing Pipeline
@@ -141,7 +134,7 @@ The demo automatically:
 
 ```toml
 [dependencies]
-opencv = "0.95.0"
+opencv = { version = "0.95.0", features = ["clang-runtime"] }
 ```
 
 ## Platform Support
