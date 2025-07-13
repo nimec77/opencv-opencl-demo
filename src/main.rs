@@ -7,35 +7,84 @@ use opencv::{
     prelude::*,
 };
 
-const ITERS: usize = 100;
+const ITERS: usize = 10;
 fn main() -> Result<()> {
     let img_file = env::args()
         .nth(1)
         .expect("Usage: cargo run --release <image>");
 
+    // Set environment variable to use rusticl platform (OpenCL 3.0)
+    // This must be done before any OpenCV OpenCL initialization
+    unsafe {
+        env::set_var("OPENCV_OPENCL_DEVICE", "rusticl:GPU:0");
+    }
+
     // Is an OpenCL runtime present?
     let have_opencl = core::have_opencl()?;
-    // Tell OpenCV to actually use it (no-op if false):
-    core::set_use_opencl(have_opencl)?;
-
+    
     // Show every detected platform / device
     if have_opencl {
         let mut plats = core::Vector::new();
         core::get_platfoms_info(&mut plats)?;
+        
+        // Find and display the rusticl platform (OpenCL 3.0)
+        let mut found_rusticl = false;
         for (pi, p) in plats.into_iter().enumerate() {
             println!("Platform #{pi}: {}", p.name()?);
             for di in 0..p.device_number()? {
                 let mut d = core::Device::default();
                 p.get_device(&mut d, di)?;
                 println!("  Device #{di}: {} ({})", d.name()?, d.version()?);
+                
+                // Check if this is the rusticl platform with OpenCL 3.0
+                if p.name()?.contains("rusticl") && d.version()?.contains("OpenCL 3.0") {
+                    found_rusticl = true;
+                    println!("  -> This is the rusticl platform with OpenCL 3.0 support");
+                }
             }
         }
+        
+        if found_rusticl {
+            println!("rusticl platform found - configured to use via OPENCV_OPENCL_DEVICE");
+        } else {
+            println!("Warning: rusticl platform not found!");
+        }
     }
+
+    // Tell OpenCV to actually use OpenCL (no-op if false):
+    core::set_use_opencl(have_opencl)?;
 
     println!(
         "OpenCL is {}abled\n",
         if core::use_opencl()? { "en" } else { "dis" }
     );
+
+    // Print information about the currently active OpenCL device
+    if core::use_opencl()? {
+        // Get the current OpenCL context and device
+        match core::Context::get_default(false) {
+            Ok(context) => {
+                if !context.empty()? {
+                    match context.device(0) {
+                        Ok(device) => {
+                            println!("=== ACTIVE OpenCL DEVICE ===");
+                            println!("Device Name: {}", device.name().unwrap_or_else(|_| "Unknown".to_string()));
+                            println!("Device Version: {}", device.version().unwrap_or_else(|_| "Unknown".to_string()));
+                            println!("=============================\n");
+                        }
+                        Err(e) => {
+                            println!("Warning: Could not get device from context: {e}\n");
+                        }
+                    }
+                } else {
+                    println!("Warning: OpenCL context is empty\n");
+                }
+            }
+            Err(e) => {
+                println!("Warning: Could not get OpenCL context: {e}\n");
+            }
+        }
+    }
 
     let img = imgcodecs::imread(&img_file, imgcodecs::IMREAD_COLOR)?;
     // -------- CPU path --------
