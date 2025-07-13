@@ -4,6 +4,7 @@
         "imgcodecs",
         "imgproc",
         "imread",
+        "initialises",
         "platfoms",
         "umat"
     ],
